@@ -39,4 +39,17 @@ public class TimeTests
         calculatedBlockNumber.Should().Be(expectedBlockNumber);
     }
 
+    [Theory]
+    [InlineData("2022-01-01T04:00:00", "2022-01-01T04:00:00")]
+    [InlineData("2022-01-01T04:14:59", "2022-01-01T04:00:00")]
+    [InlineData("2022-01-01T04:15:00", "2022-01-01T04:30:00")]
+    [InlineData("2022-01-01T04:30:00", "2022-01-01T04:30:00")]
+    [InlineData("2022-01-01T04:44:59", "2022-01-01T04:30:00")]
+    [InlineData("2022-01-01T04:55:00", "2022-01-01T05:00:00")]
+    [InlineData("2022-01-01T23:50:00", "2022-01-02T00:00:00")]
+    public void TestRoundToNearestHalfHour(string input, string expected)
+    {
+        var rounded = Utilities.Time.RoundToNearestHalfHour(DateTime.Parse(input));
+        rounded.Should().Be(DateTime.Parse(expected));
+    }
 }

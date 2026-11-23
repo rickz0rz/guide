@@ -30,5 +30,12 @@ AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
 
 logger.LogInformation("Current process ID: {processId}", System.Diagnostics.Process.GetCurrentProcess().Id);
 
-using var guide = new Guide.ScrollingGuideRunner(logger);
+Guide.NativeLibraryResolver.Register();
+
+var options = Guide.RunnerOptions.Parse(args);
+
+// The fonts and images load from relative paths, so run from the folder of the build output.
+Directory.SetCurrentDirectory(AppContext.BaseDirectory);
+
+using var guide = new Guide.ScrollingGuideRunner(logger, options);
 guide.Run();

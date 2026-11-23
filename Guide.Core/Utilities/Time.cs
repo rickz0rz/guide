@@ -18,6 +18,19 @@ public static class Time
         return newDateTime;
     }
 
+    public static DateTime RoundToNearestHalfHour(DateTime dateTime)
+    {
+        // Round to the nearest :00 or :30. A time at :15 or :45 rounds up.
+        //
+        // i.e. 4:14:59 -> 4:00:00, 4:15:00 -> 4:30:00, 4:55:00 -> 5:00:00
+        var halfHourTicks = TimeSpan.FromMinutes(30).Ticks;
+        var previousHalfHour = new DateTime(dateTime.Ticks - dateTime.Ticks % halfHourTicks, dateTime.Kind);
+
+        return dateTime - previousHalfHour >= TimeSpan.FromMinutes(15)
+            ? previousHalfHour.AddMinutes(30)
+            : previousHalfHour;
+    }
+
     public static DateTime ClampToPreviousHalfHour(DateTime dateTime)
     {
         // Given a time, clamp it to it's last previous "on the 30 or 00" minutes

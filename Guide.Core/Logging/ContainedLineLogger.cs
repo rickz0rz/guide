@@ -5,8 +5,19 @@ namespace Guide.Core.Logging;
 
 public class ContainedLineLogger : ILogger
 {
-    public List<string> Lines { get; }
-    public long LinesLogged => _linesLogged;
+    // The listings load on another thread, so a lock protects the lines.
+    private readonly Lock _lock = new();
+    private readonly List<string> _lines = [];
+
+    public long LinesLogged => Interlocked.Read(ref _linesLogged);
+
+    public IReadOnlyList<string> GetLines()
+    {
+        lock (_lock)
+        {
+            return _lines.ToArray();
+        }
+    }
 
     private readonly int _maximumLineCount;
 
@@ -14,18 +25,20 @@ public class ContainedLineLogger : ILogger
 
     public ContainedLineLogger(int maximumLineCount = 50)
     {
-        Lines = [];
         _maximumLineCount = maximumLineCount;
     }
 
     private void AddLine(string line)
     {
-        while (Lines.Count >= _maximumLineCount)
+        lock (_lock)
         {
-            Lines.RemoveAt(0);
+            while (_lines.Count >= _maximumLineCount)
+            {
+                _lines.RemoveAt(0);
+            }
+            _lines.Add(line);
+            _linesLogged++;
         }
-        Lines.Add(line);
-        _linesLogged++;
     }
 
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)

@@ -8,6 +8,7 @@ namespace Guide.Core.SDL;
 public class FontManager : IDisposable
 {
     private readonly ConcurrentDictionary<(string, int), nint> _openedFonts;
+    private readonly ConcurrentDictionary<(string, int), nint> _outlinedFonts = new();
     private readonly ILogger _logger;
 
     public readonly Dictionary<string, FontConfiguration> FontConfigurations;
@@ -34,6 +35,20 @@ public class FontManager : IDisposable
         }
     }
 
+    // Get a font that always draws an outline of one unscaled pixel. A change to the outline of a font
+    // empties its glyph cache, so keep a separate font for the outline.
+    public nint GetOutlinedFont(string fontName)
+    {
+        var scaledKey = (fontName, FontConfigurations[fontName].PointSize * Configuration.Scale);
+
+        return _outlinedFonts.GetOrAdd(scaledKey, key =>
+        {
+            var font = SDL3.TTF.OpenFont(FontConfigurations[fontName].Filename, key.Item2);
+            _ = SDL3.TTF.SetFontOutline(font, Configuration.Scale);
+            return font;
+        });
+    }
+
     public FontManager(ILogger logger)
     {
         _logger = logger;
@@ -44,11 +59,14 @@ public class FontManager : IDisposable
 
     public void Dispose()
     {
-        foreach (var openedFont in _openedFonts.Keys)
+        foreach (var fonts in new[] { _openedFonts, _outlinedFonts })
         {
-            if (_openedFonts.TryRemove(openedFont, out var font))
+            foreach (var openedFont in fonts.Keys)
             {
-                SDL3.TTF.CloseFont(font);
+                if (fonts.TryRemove(openedFont, out var font))
+                {
+                    SDL3.TTF.CloseFont(font);
+                }
             }
         }
     }
